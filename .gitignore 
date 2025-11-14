@@ -1,0 +1,20 @@
+# Env
+venv/
+.env/
+*.env
+
+.idea/
+
+# Dataset
+dataset/raw/*
+dataset/temp/*
+dataset/.cache/*
+
+# Models
+*.pkl
+*.h5
+*.onnx
+
+# Build
+build/
+dist/
