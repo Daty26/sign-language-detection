@@ -4,12 +4,13 @@ from classifier.ml_classifier import MLClassifier
 class GestureClassifier:
     def __init__(self):
         self.rule = RuleBasedClassifier()
-        self.ml = MLClassifier()
+        self.ml = MLClassifier(path="classifier/model.pkl")
 
         try:
             self.ml.load()
             self.use_ml = True
         except:
+            print("ml not loaded. trying to use rule-based classifier")
             self.use_ml = False
 
     def classify(self, features, ml_vector=None):
