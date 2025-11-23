@@ -3,8 +3,7 @@ venv/
 .env/
 *.env
 
-.idea/*
-
+.idea/
 
 # Dataset
 dataset/raw/*
