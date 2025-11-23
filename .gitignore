@@ -5,7 +5,10 @@ venv/
 
 .idea/
 
+__pycache__/
+
 # Dataset
+*.csv
 dataset/raw/*
 dataset/temp/*
 dataset/.cache/*
