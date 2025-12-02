@@ -3,9 +3,11 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from features.feature_extractor import extract_features
+from classifier.training.config import DATASET_PATH
+
 
 def save_sample(label: str, feature_vector):
-    with open("dataset.csv", "a", newline="") as f:
+    with open(DATASET_PATH, "a", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([label] + list(feature_vector))
 

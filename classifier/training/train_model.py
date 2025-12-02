@@ -3,7 +3,9 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from classifier.ml_classifier import MLClassifier
-from prepare_dataset import load_dataset
+from classifier.training.prepare_dataset import load_dataset
+from classifier.training.config import DATASET_PATH, MODEL_PATH
+
 
 
 def train_knn(X, y, k=7, model_path="../model.pkl"):
@@ -32,7 +34,7 @@ def train_random_forest(X, y, model_path="../model.pkl"):
 
 def main():
     print("\nLoading dataset...")
-    X, y = load_dataset()
+    X, y = load_dataset(DATASET_PATH)
     X = np.array(X)
     y = np.array(y)
 
@@ -47,7 +49,7 @@ def main():
     #choose model here:
     USE_RANDOM_FOREST = False  # make True if you want rf instead of knn
 
-    model_path = "../model.pkl"
+    model_path = MODEL_PATH
 
     # Train model
     if USE_RANDOM_FOREST:
