@@ -2,6 +2,13 @@ import os
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+
+import os
+import sys
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+sys.path.append(PROJECT_ROOT)
+
 from classifier.ml_classifier import MLClassifier
 from classifier.training.prepare_dataset import load_dataset
 from classifier.training.config import DATASET_PATH, MODEL_PATH
