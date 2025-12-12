@@ -2,13 +2,13 @@ import csv
 import cv2
 import mediapipe as mp
 import numpy as np
-# import os
-# import sys
-#
-# PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
-# sys.path.append(PROJECT_ROOT)
-# DATASET_PATH = os.path.join(PROJECT_ROOT, "dataset", "dataset.csv")
-#
+import os
+import sys
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+sys.path.append(PROJECT_ROOT)
+DATASET_PATH = os.path.join(PROJECT_ROOT, "dataset", "dataset.csv")
+
 from features.feature_extractor import extract_features
 from classifier.training.config import DATASET_PATH
 
