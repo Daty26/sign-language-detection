@@ -15,7 +15,7 @@ dataset/temp/*
 dataset/.cache/*
 
 # Models
-*.pkl
+#*.pkl
 *.h5
 *.onnx
 
