@@ -51,6 +51,10 @@ class SignLanguageApp(ctk.CTk):
         if not self.is_running:
             self.is_running = True
             self.cap = cv2.VideoCapture(0)
+
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+
             if not self.cap.isOpened():
                 print("Не удалось открыть камеру")
                 self.is_running = False
