@@ -1,11 +1,14 @@
-# Feature vector layout:
-# [0:5]  finger angles   [thumb, index, middle, ring, pinky]  (normalized by pi)
-# [5:10] finger flags    [thumb, index, middle, ring, pinky]  (0=down, 1=up)
-# [10]   d_thumb_index   (normalized by palm size)
-# [11]   d_index_middle  (normalized by palm size)
-# [12:15] palm normal    (x, y, z)
+# Feature vector layout (length = 20):
+# [0:5]   finger angles   [thumb, index, middle, ring, pinky]  (normalized by pi)
+# [5:10]  finger flags    [thumb, index, middle, ring, pinky]  (0=down, 1=up)
+# [10]    d_thumb_index   (normalized by palm size / in normalized space)
+# [11]    d_index_middle  (normalized by palm size / in normalized space)
+# [12:15] palm normal     (x, y, z)
+# [15]    hand openness   (average fingertip distance from palm center)
+# [16:20] finger spread   (thumb–index, index–middle, middle–ring, ring–pinky)
+
 import numpy as np
-from typing import Dict, List
+from typing import Dict, List, Sequence, Tuple
 
 from .geometry_utils import (
     distance,
@@ -56,6 +59,29 @@ def _finger_joint_sets() -> Dict[str, List[int]]:
     }
 
 
+def normalize_landmarks(landmarks: np.ndarray) -> Tuple[np.ndarray, float]:
+    """
+    Translate and scale landmarks so that:
+    - Wrist is at (0, 0, 0)
+    - Palm size (wrist -> middle MCP) is ~1
+
+    Returns
+    -------
+    landmarks_norm : np.ndarray
+        Normalized landmarks of shape (21, 3).
+    palm_size : float
+        Original palm size used for scaling.
+    """
+    wrist = landmarks[WRIST]
+    shifted = landmarks - wrist
+
+    middle_mcp = landmarks[MIDDLE_MCP]
+    palm_size = distance(wrist, middle_mcp) + 1e-6  # avoid division by zero
+
+    normalized = shifted / palm_size
+    return normalized, palm_size
+
+
 def compute_finger_angles(landmarks: np.ndarray) -> Dict[str, float]:
     """
     Compute flexion angle for each finger in radians.
@@ -93,7 +119,7 @@ def compute_finger_up_flags(landmarks: np.ndarray) -> Dict[str, int]:
 def compute_palm_orientation(landmarks: np.ndarray) -> np.ndarray:
     """
     Estimate palm normal using wrist, index_mcp, pinky_mcp.
-    Returns a 3D vector (not necessarily unit).
+    Returns a unit 3D vector.
     """
     wrist = landmarks[WRIST]
     index_mcp = landmarks[INDEX_MCP]
@@ -106,6 +132,33 @@ def compute_palm_orientation(landmarks: np.ndarray) -> np.ndarray:
     return normal  # shape (3,)
 
 
+def compute_hand_openness(landmarks_norm: np.ndarray) -> float:
+    """
+    Measure how 'open' the hand is: average distance of fingertips from palm center.
+    Uses normalized landmarks (palm size ~ 1).
+    """
+    fingertip_indices = [THUMB_TIP, INDEX_TIP, MIDDLE_TIP, RING_TIP, PINKY_TIP]
+    tips = landmarks_norm[fingertip_indices]  # (5, 3)
+    palm_center = landmarks_norm[WRIST]       # after normalization this is (0,0,0)
+    dists = np.linalg.norm(tips - palm_center, axis=1)
+    return float(dists.mean())
+
+
+def compute_finger_spread(landmarks_norm: np.ndarray) -> np.ndarray:
+    """
+    Distances between adjacent fingertips in normalized space.
+    Order: thumb-index, index-middle, middle-ring, ring-pinky
+    """
+    indices = [THUMB_TIP, INDEX_TIP, MIDDLE_TIP, RING_TIP, PINKY_TIP]
+    tips = landmarks_norm[indices]
+
+    spreads = []
+    for i in range(len(tips) - 1):
+        spreads.append(np.linalg.norm(tips[i + 1] - tips[i]))
+
+    return np.asarray(spreads, dtype=np.float32)  # shape (4,)
+
+
 def extract_features(landmarks: np.ndarray) -> np.ndarray:
     """
     Convert 21x3 hand landmarks into a compact feature vector.
@@ -114,7 +167,7 @@ def extract_features(landmarks: np.ndarray) -> np.ndarray:
     ----------
     landmarks : np.ndarray
         Array of shape (21, 3) with MediaPipe hand landmarks
-        in normalized coordinates.
+        in normalized coordinates (as given by the pipeline).
 
     Returns
     -------
@@ -122,51 +175,66 @@ def extract_features(landmarks: np.ndarray) -> np.ndarray:
         1D feature vector containing:
         - 5 normalized finger angles (0..1)
         - 5 finger up/down flags (0 or 1)
-        - 2 normalized distances
+        - 2 distances between fingertips (in normalized space)
         - 3D palm normal vector
+        - 1 hand openness scalar
+        - 4 finger spread distances (adjacent fingertips)
     """
     landmarks = np.asarray(landmarks, dtype=np.float32)
     if landmarks.shape != (21, 3):
         raise ValueError(f"Expected landmarks shape (21, 3), got {landmarks.shape}")
 
-    # 1) Finger angles
-    finger_angles = compute_finger_angles(landmarks)
-    # Convert radians to something normalized [0, 1] (divide by pi)
+    # Normalize landmarks for scale & translation invariance
+    landmarks_norm, palm_size = normalize_landmarks(landmarks)
+
+    # 1) Finger angles (use normalized landmarks; angles invariant to translation/scale)
+    finger_angles = compute_finger_angles(landmarks_norm)
+    # Convert radians to [0, 1] (divide by pi)
     angle_features = np.array(
         [finger_angles[f] for f in ["thumb", "index", "middle", "ring", "pinky"]],
         dtype=np.float32,
     ) / np.pi
 
-    # 2) Finger up flags (0/1)
-    finger_flags = compute_finger_up_flags(landmarks)
+    # 2) Finger up flags (0/1) - y-relations preserved under our normalization
+    finger_flags = compute_finger_up_flags(landmarks_norm)
     flag_features = np.array(
         [finger_flags[f] for f in ["thumb", "index", "middle", "ring", "pinky"]],
         dtype=np.float32,
     )
 
-    # 3) Distances, normalized by palm size
-    wrist = landmarks[WRIST]
-    middle_mcp = landmarks[MIDDLE_MCP]
-    palm_size = distance(wrist, middle_mcp) + 1e-6  # avoid division by zero
+    # 3) Distances between fingertips in normalized space
+    thumb_tip = landmarks_norm[THUMB_TIP]
+    index_tip = landmarks_norm[INDEX_TIP]
+    middle_tip = landmarks_norm[MIDDLE_TIP]
 
-    thumb_tip = landmarks[THUMB_TIP]
-    index_tip = landmarks[INDEX_TIP]
-    middle_tip = landmarks[MIDDLE_TIP]
-
-    d_thumb_index = distance(thumb_tip, index_tip) / palm_size
-    d_index_middle = distance(index_tip, middle_tip) / palm_size
+    d_thumb_index = distance(thumb_tip, index_tip)       # already scale-normalized
+    d_index_middle = distance(index_tip, middle_tip)
 
     distance_features = np.array(
         [d_thumb_index, d_index_middle], dtype=np.float32
     )
 
-    # 4) Palm orientation vector
-    palm_normal = compute_palm_orientation(landmarks)  # (3,)
+    # 4) Palm orientation vector (uses normalized landmarks; direction is what matters)
+    palm_normal = compute_palm_orientation(landmarks_norm)  # (3,)
     palm_features = palm_normal.astype(np.float32)
+
+    # 5) Hand openness
+    openness = np.array([compute_hand_openness(landmarks_norm)], dtype=np.float32)
+
+    # 6) Finger spread features
+    spread_features = compute_finger_spread(landmarks_norm)  # (4,)
 
     # Concatenate everything into one feature vector
     feature_vector = np.concatenate(
-        [angle_features, flag_features, distance_features, palm_features], axis=0
+        [
+            angle_features,
+            flag_features,
+            distance_features,
+            palm_features,
+            openness,
+            spread_features,
+        ],
+        axis=0,
     )
 
     return feature_vector
