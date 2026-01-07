@@ -29,11 +29,11 @@ class RuleBasedClassifier:
         if all([thumb, index, middle, ring, pinky]) and palm == "front" and move == "forward":
             return "Thank You"
 
-        if not thumb and not index and not middle and not ring and not pinky:
-            return "Yes"
+        # if not thumb and not index and not middle and not ring and not pinky:
+        #     return "Yes"
 
-        if index and middle and not ring and not pinky:
-            return "No"
+        # if index and middle and not ring and not pinky:
+        #     return "No"
 
         if all([thumb, index, middle, ring, pinky]) and palm == "front":
             return "Stop"

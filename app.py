@@ -31,7 +31,7 @@ class SignLanguageDetectionApp(SignLanguageApp):
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5
         )
-        self.classifier = GestureClassifier()
+        self.classifier = GestureClassifier(use_rule_based=True, confidence_threshold=0.9)
         self.last_gesture = None
         self.gesture_counter = 0
     
