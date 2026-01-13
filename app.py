@@ -76,7 +76,7 @@ class SignLanguageDetectionApp(SignLanguageApp):
                     features_dict = self._features_to_dict(features_vector)
                     # gesture = self.classifier.classify(features_dict, features_vector)
                     gesture, conf_pct = self.classifier.classify_with_confidence(features_dict, features_vector)
-                    self._draw_prediction(frame_bgr, gesture, conf_pct)
+                    # self._draw_prediction(frame_bgr, gesture, conf_pct)
                     
                     # Add to output if gesture changed and stable
                     if gesture != "Unknown" and gesture != self.last_gesture:
@@ -90,11 +90,29 @@ class SignLanguageDetectionApp(SignLanguageApp):
                     
                     # Draw landmarks using MediaPipe drawing utils
                     if results.multi_hand_landmarks:
+                        # mp.solutions.drawing_utils.draw_landmarks(
+                        #     frame_bgr,
+                        #     results.multi_hand_landmarks[0],
+                        #     mp.solutions.hands.HAND_CONNECTIONS
+                        # )
+                        hand_lms = results.multi_hand_landmarks[0]
+                        # draw landmarks
                         mp.solutions.drawing_utils.draw_landmarks(
-                            frame_bgr,
-                            results.multi_hand_landmarks[0],
-                            mp.solutions.hands.HAND_CONNECTIONS
+                            frame_bgr, hand_lms, mp.solutions.hands.HAND_CONNECTIONS
                         )
+
+                        # bbox + label
+                        x1, y1, x2, y2 = self._hand_bbox_from_landmarks(hand_lms, frame_bgr.shape)
+
+                        color = (0, 255, 0) if gesture != "Unknown" else (0, 0, 255)
+                        cv2.rectangle(frame_bgr, (x1, y1), (x2, y2), color, 2)
+
+                        label = f"{gesture} ({conf_pct}%)"
+                        # Put label slightly above the box; clamp so it stays on-screen
+                        ty = max(20, y1 - 10)
+                        cv2.putText(frame_bgr, label, (x1, ty),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2, cv2.LINE_AA)
+                        
                 else:
                     self.last_gesture = None
                     self.gesture_counter = 0
@@ -149,6 +167,15 @@ class SignLanguageDetectionApp(SignLanguageApp):
             2,
             cv2.LINE_AA
         )
+
+    def _hand_bbox_from_landmarks(self, hand_landmarks, frame_shape, pad=12):
+        h, w = frame_shape[:2]
+        xs = [int(lm.x * w) for lm in hand_landmarks.landmark]
+        ys = [int(lm.y * h) for lm in hand_landmarks.landmark]
+
+        x1, x2 = max(0, min(xs) - pad), min(w - 1, max(xs) + pad)
+        y1, y2 = max(0, min(ys) - pad), min(h - 1, max(ys) + pad)
+        return x1, y1, x2, y2
 
     
 
