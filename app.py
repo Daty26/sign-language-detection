@@ -74,7 +74,9 @@ class SignLanguageDetectionApp(SignLanguageApp):
                     # Extract features and classify
                     features_vector = extract_features(hand.landmarks)
                     features_dict = self._features_to_dict(features_vector)
-                    gesture = self.classifier.classify(features_dict, features_vector)
+                    # gesture = self.classifier.classify(features_dict, features_vector)
+                    gesture, conf_pct = self.classifier.classify_with_confidence(features_dict, features_vector)
+                    self._draw_prediction(frame_bgr, gesture, conf_pct)
                     
                     # Add to output if gesture changed and stable
                     if gesture != "Unknown" and gesture != self.last_gesture:
@@ -134,6 +136,20 @@ class SignLanguageDetectionApp(SignLanguageApp):
             "palm_orientation": palm_orientation,
             "hand_movement": "none"
         }
+    
+    def _draw_prediction(self, frame_bgr, label, conf_pct):
+        text = f"{label} ({conf_pct}%)" if label != "Unknown" else f"Unknown ({conf_pct}%)"
+        cv2.putText(
+            frame_bgr,
+            text,
+            (20, 40),  # position
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.0,       # font scale
+            (0, 255, 0) if label != "Unknown" else (0, 0, 255),
+            2,
+            cv2.LINE_AA
+        )
+
     
 
 

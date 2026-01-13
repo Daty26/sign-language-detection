@@ -31,3 +31,29 @@ class GestureClassifier:
                 print(f"ML prediction error: {e}")
 
         return "Unknown"
+    
+    def classify_with_confidence(self, features, ml_vector=None):
+        """
+        Returns: (label, confidence_percent_int)
+        confidence is 0..100
+        """
+        # Rule-based result (treat as 100% confidence if it fires)
+        if self.use_rule_based and self.rule is not None:
+            result = self.rule.classify(features)
+            if result != "Unknown":
+                return result, 100
+
+        # ML result
+        if self.use_ml and ml_vector is not None:
+            try:
+                prediction, conf01 = self.ml.predict_with_confidence(ml_vector)  # 0..1
+                conf_pct = int(round(conf01 * 100))
+                if conf01 >= self.confidence_threshold:
+                    return prediction, conf_pct
+                else:
+                    # below threshold => return Unknown but still show confidence if you want
+                    return "Unknown", conf_pct
+            except Exception as e:
+                print(f"ML prediction error: {e}")
+
+        return "Unknown", 0
