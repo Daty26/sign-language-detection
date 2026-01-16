@@ -22,3 +22,9 @@ dataset/.cache/*
 # Build
 build/
 dist/
+*/checkpoint-*/
+*/runs/
+resnet50_head/
+resnet50_finetuned/
+vit_finetuned/
+runs/
