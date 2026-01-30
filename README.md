@@ -102,11 +102,6 @@ Make sure your webcam is connected and accessible.
 python classifier/training/collect_data.py
 ```
 
-### Prepare Dataset
-```bash
-python classifier/training/prepare_dataset.py
-```
-
 ### Train the Model
 ```bash
 python classifier/training/train_model.py
