@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""
-Sign Language Detection - Main Application
-Integrates all modules: UI, camera, landmarks, features, and classifier.
-"""
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -22,7 +18,6 @@ from classifier.gesture_classifier import GestureClassifier
 
 
 class SignLanguageDetectionApp(SignLanguageApp):
-    """Extended app with full gesture detection pipeline."""
     
     def __init__(self):
         super().__init__()
@@ -30,29 +25,20 @@ class SignLanguageDetectionApp(SignLanguageApp):
         # Replace cv2.VideoCapture with CameraStream
         self.camera = None
         
-        # Initialize detection pipeline with optimized settings
+        # Initialize detection pipeline
         self.detector = MediaPipeHandDetector(
             max_num_hands=1,
-            min_detection_confidence=0.7,
-            min_tracking_confidence=0.7
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.5
         )
-        self.classifier = GestureClassifier()
-        
-        # Gesture tracking
+        self.classifier = GestureClassifier(use_rule_based=True, confidence_threshold=0.8)
         self.last_gesture = None
         self.gesture_counter = 0
-        
-        # Performance optimization: frame skipping
-        self.frame_count = 0
-        self.process_every_n_frames = 2  # Process every 2nd frame
-        self.last_results = None  # Cache last detection results
     
     def start_detection(self):
-        """Override to use CameraStream instead of cv2.VideoCapture."""
         if not self.is_running:
             self.is_running = True
-            # Use smaller resolution for better FPS (416x416 good for MediaPipe)
-            self.camera = CameraStream(width=416, height=416)
+            self.camera = CameraStream()
             try:
                 self.camera.start()
                 self.update_loop()
@@ -62,7 +48,6 @@ class SignLanguageDetectionApp(SignLanguageApp):
                 self.camera = None
     
     def stop_detection(self):
-        """Override to use CameraStream."""
         self.is_running = False
         if self.camera:
             self.camera.stop()
@@ -71,11 +56,8 @@ class SignLanguageDetectionApp(SignLanguageApp):
         self.video_frame.label.configure(image='', text="Camera Paused")
         self.last_gesture = None
         self.gesture_counter = 0
-        self.frame_count = 0
-        self.last_results = None
         
     def update_loop(self):
-        """Override update_loop to add gesture detection with optimizations."""
         if self.is_running and self.camera:
             try:
                 # Read frame from CameraStream
@@ -83,51 +65,59 @@ class SignLanguageDetectionApp(SignLanguageApp):
                 frame_bgr = (frame_normalized * 255).astype(np.uint8)
                 frame_bgr = cv2.cvtColor(frame_bgr, cv2.COLOR_RGB2BGR)
                 
-                # Performance optimization: process detection every N frames
-                self.frame_count += 1
-                should_process = (self.frame_count % self.process_every_n_frames == 0)
+                # Process frame
+                results = self.detector.process(frame_bgr)
+                hand = extract_first_hand(results, frame_bgr.shape)
                 
-                if should_process:
-                    # Process frame with full pipeline
-                    results = self.detector.process(frame_bgr)
-                    self.last_results = results  # Cache for next frames
-                else:
-                    # Reuse cached results for smoother display
-                    results = self.last_results
-                
-                # Extract hand and process gesture (even with cached results)
-                if results:
-                    hand = extract_first_hand(results, frame_bgr.shape)
+                # Detect gesture if hand found
+                if hand:
+                    # Extract features and classify
+                    features_vector = extract_features(hand.landmarks)
+                    features_dict = self._features_to_dict(features_vector)
+                    # gesture = self.classifier.classify(features_dict, features_vector)
+                    gesture, conf_pct = self.classifier.classify_with_confidence(features_dict, features_vector)
+                    # self._draw_prediction(frame_bgr, gesture, conf_pct)
                     
-                    # Detect gesture if hand found
-                    if hand:
-                        # Extract features and classify
-                        features_vector = extract_features(hand.landmarks)
-                        features_dict = self._features_to_dict(features_vector)
-                        gesture = self.classifier.classify(features_dict, features_vector)
-                        
-                        # Add to output if gesture changed and stable
-                        if gesture != "Unknown" and gesture != self.last_gesture:
-                            self.gesture_counter += 1
-                            if self.gesture_counter > 3:
-                                self.text_box.add_text(gesture)
-                                self.last_gesture = gesture
-                                self.gesture_counter = 0
-                        elif gesture == self.last_gesture:
+                    # Add to output if gesture changed and stable
+                    if gesture != "Unknown" and gesture != self.last_gesture:
+                        self.gesture_counter += 1
+                        if self.gesture_counter > 3:
+                            self.text_box.add_text(gesture)
+                            self.last_gesture = gesture
                             self.gesture_counter = 0
-                        
-                        # Draw landmarks using MediaPipe drawing utils
-                        if results.multi_hand_landmarks:
-                            mp.solutions.drawing_utils.draw_landmarks(
-                                frame_bgr,
-                                results.multi_hand_landmarks[0],
-                                mp.solutions.hands.HAND_CONNECTIONS
-                            )
-                    else:
-                        self.last_gesture = None
+                    elif gesture == self.last_gesture:
                         self.gesture_counter = 0
+                    
+                    # Draw landmarks using MediaPipe drawing utils
+                    if results.multi_hand_landmarks:
+                        # mp.solutions.drawing_utils.draw_landmarks(
+                        #     frame_bgr,
+                        #     results.multi_hand_landmarks[0],
+                        #     mp.solutions.hands.HAND_CONNECTIONS
+                        # )
+                        hand_lms = results.multi_hand_landmarks[0]
+                        # draw landmarks
+                        mp.solutions.drawing_utils.draw_landmarks(
+                            frame_bgr, hand_lms, mp.solutions.hands.HAND_CONNECTIONS
+                        )
+
+                        # bbox + label
+                        x1, y1, x2, y2 = self._hand_bbox_from_landmarks(hand_lms, frame_bgr.shape)
+
+                        color = (0, 255, 0) if gesture != "Unknown" else (0, 0, 255)
+                        cv2.rectangle(frame_bgr, (x1, y1), (x2, y2), color, 2)
+
+                        label = f"{gesture} ({conf_pct}%)"
+                        # Put label slightly above the box; clamp so it stays on-screen
+                        ty = max(20, y1 - 10)
+                        cv2.putText(frame_bgr, label, (x1, ty),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2, cv2.LINE_AA)
+                        
+                else:
+                    self.last_gesture = None
+                    self.gesture_counter = 0
                 
-                # Display frame (always, for smooth video)
+                # Display frame
                 frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
                 pil_image = Image.fromarray(frame_rgb)
                 viewport_width = self.video_frame.winfo_width()
@@ -140,11 +130,9 @@ class SignLanguageDetectionApp(SignLanguageApp):
             except Exception as e:
                 print(f"Frame processing error: {e}")
         
-        # Reduced delay for faster loop (5ms instead of 10ms)
-        self.after(5, self.update_loop)
+        self.after(10, self.update_loop)
     
     def _features_to_dict(self, features_vector):
-        """Convert feature vector to dict for rule-based classifier."""
         flags = features_vector[5:10]  # finger up/down flags
         palm_normal = features_vector[12:15]  # palm orientation vector
         
@@ -166,6 +154,29 @@ class SignLanguageDetectionApp(SignLanguageApp):
             "palm_orientation": palm_orientation,
             "hand_movement": "none"
         }
+    
+    def _draw_prediction(self, frame_bgr, label, conf_pct):
+        text = f"{label} ({conf_pct}%)" if label != "Unknown" else f"Unknown ({conf_pct}%)"
+        cv2.putText(
+            frame_bgr,
+            text,
+            (20, 40),  # position
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.0,       # font scale
+            (0, 255, 0) if label != "Unknown" else (0, 0, 255),
+            2,
+            cv2.LINE_AA
+        )
+
+    def _hand_bbox_from_landmarks(self, hand_landmarks, frame_shape, pad=12):
+        h, w = frame_shape[:2]
+        xs = [int(lm.x * w) for lm in hand_landmarks.landmark]
+        ys = [int(lm.y * h) for lm in hand_landmarks.landmark]
+
+        x1, x2 = max(0, min(xs) - pad), min(w - 1, max(xs) + pad)
+        y1, y2 = max(0, min(ys) - pad), min(h - 1, max(ys) + pad)
+        return x1, y1, x2, y2
+
     
 
 
