@@ -59,7 +59,7 @@ sign_language_detection/
 
 ### Python Version Requirement
 
-This project requires **Python 3.10**.
+This project requires **Python 3.12**.
 
 Check your version:
 ```bash
@@ -109,13 +109,116 @@ python classifier/training/train_model.py
 
 The trained model will be saved as `model.pkl`.
 
-## Model Evaluation
+## 📊 Model Evaluation
+
+To ensure fair comparison between different gesture recognition approaches, the project includes a unified evaluation framework.
+
+Three types of models are evaluated:
+
+1. **MediaPipe + Classical ML**
+   - Hand landmarks extracted using MediaPipe
+   - Feature vectors classified using KNN / Random Forest
+
+2. **CNN-based models**
+   - ResNet-50 pretrained on ImageNet and fine-tuned on the sign language dataset
+
+3. **Transformer-based models**
+   - Vision Transformer (ViT) pretrained on ImageNet and fine-tuned on the dataset
+
+All models are evaluated on identical dataset splits.
+
+---
+
+### 1) Create Dataset Splits
+
+Generate a reproducible stratified train/test split:
 
 ```bash
-python classifier/evaluation/evaluate_model.py
+python -m classifier.evaluation.make_split
 ```
 
-This will output accuracy and performance metrics.
+This creates:
+
+```
+splits/split_seed42.csv
+```
+
+Optionally, generate k-fold splits (e.g. 5-fold cross-validation):
+
+```bash
+python -m classifier.evaluation.make_folds --k 5
+```
+
+Result:
+
+```
+splits/folds_seed42_k5.csv
+```
+
+---
+
+### 2) Run Benchmark Evaluation
+
+Run evaluation for all models on the same split:
+
+```bash
+python -m classifier.evaluation.run_benchmarks \
+  --split-csv splits/split_seed42.csv \
+  --models ml,resnet,vit \
+  --out-csv runs/benchmark_results.csv
+```
+
+Run k-fold cross-validation:
+
+```bash
+python -m classifier.evaluation.run_benchmarks \
+  --split-csv splits/folds_seed42_k5.csv \
+  --models ml,resnet,vit \
+  --out-csv runs/benchmark_kfold_results.csv
+```
+
+Run a single model:
+
+```bash
+python -m classifier.evaluation.run_benchmarks \
+  --split-csv splits/split_seed42.csv \
+  --models vit
+```
+
+Run a single fold:
+
+```bash
+python -m classifier.evaluation.run_benchmarks \
+  --split-csv splits/folds_seed42_k5.csv \
+  --models resnet \
+  --fold 0
+```
+
+---
+
+### 3) Evaluation Metrics
+
+The following metrics are reported:
+
+- Accuracy  
+- Per-class precision, recall, and F1-score  
+- Confusion matrix  
+- Mean and standard deviation (for k-fold evaluation)  
+- Number of skipped samples (for MediaPipe-based models)  
+
+Results are stored in CSV format in the `runs/` directory.
+
+---
+
+### 4) Reproducibility
+
+To ensure reproducibility:
+
+- Fixed random seed (42)  
+- Stratified sampling  
+- Identical splits across models  
+- Optional k-fold cross-validation  
+
 
 ## Testing
 
