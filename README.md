@@ -49,7 +49,10 @@ sign_language_detection/
 │   ├── ui_main.py
 │   └── ui_components.py
 │
-└── tests & experiments        # Scratch and test files
+└── tests/                     # Automated tests
+    ├── test_flow.py           # Full pipeline integration test
+    └── test_performance.py    # Camera FPS / performance test
+
 ```
 
 ## ⚙️ Installation  
@@ -116,11 +119,21 @@ python classifier/evaluation/evaluate_model.py
 
 This will output accuracy and performance metrics.
 
-## 🧪 Testing & Experiments
+## 🧪 Testing
 
-- `test_features.py` – feature extraction testing  
-- `scratch_test_features.py` – experimental feature tests  
-- `camera_stream_test.py` – camera validation  
+The project includes the following tests:
+
+- `test_flow.py` – integration test of the complete pipeline  
+  (camera → landmarks → features → classifier)
+
+- `test_performance.py` – performance test  
+  measures camera FPS and real-time processing stability
+
+To run the tests:
+```bash
+python tests/test_flow.py
+python tests/test_performance.py
+
 
 ## 🚀 Future Improvements
 
