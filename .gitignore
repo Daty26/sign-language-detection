@@ -5,6 +5,7 @@ venv/
 .venv
 
 .idea/
+*.iml
 
 __pycache__/
 
