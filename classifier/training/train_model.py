@@ -13,7 +13,7 @@ from classifier.training.config import DATASET_PATH, MODEL_PATH
 
 
 def train_knn(X, y, k=7, model_path="../model.pkl"):
-    print(f"\nTraining KNN classifier with k={k}...")
+    print(f"\ntraining KNN classifier with k={k}")
     clf = MLClassifier(path=model_path, model_type="knn")
     clf.train(X, y, k=k)
     print("KNN training complete.")
@@ -21,10 +21,10 @@ def train_knn(X, y, k=7, model_path="../model.pkl"):
 
 
 def train_random_forest(X, y, model_path="../model.pkl"):
-    print("\nTraining RandomForest classifier...")
+    print("\ntraining RandomForest classifier")
     clf = MLClassifier(path=model_path, model_type="random_forest")
     clf.train(X, y, n_estimators=150)
-    print("RandomForest training complete.")
+    print("RandomForest training complete")
     return clf
 
 

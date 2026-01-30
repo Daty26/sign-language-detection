@@ -5,6 +5,7 @@ venv/
 .venv
 
 .idea/
+*.iml
 
 __pycache__/
 
@@ -13,6 +14,8 @@ __pycache__/
 dataset/raw/*
 dataset/temp/*
 dataset/.cache/*
+!dataset/dataset.csv
+!dataset/dataset_v2_custom.csv
 
 # Models
 #*.pkl
