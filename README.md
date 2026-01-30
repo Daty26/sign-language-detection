@@ -2,7 +2,7 @@
 
 A computer vision–based sign language detection system that recognizes hand gestures from a live camera feed using MediaPipe landmarks and machine learning classifiers.
 
-## 📌 Project Overview
+## Project Overview
 
 This project detects and classifies hand gestures (sign language) in real time. It uses:
 
@@ -13,7 +13,7 @@ This project detects and classifies hand gestures (sign language) in real time. 
 
 The system can be trained on custom datasets and evaluated using built-in scripts.
 
-## 🗂️ Project Structure
+## Project Structure
 
 ```
 sign_language_detection/
@@ -55,9 +55,9 @@ sign_language_detection/
 
 ```
 
-## ⚙️ Installation  
+## Installation  
 
-### 🐍 Python Version Requirement
+### Python Version Requirement
 
 This project requires **Python 3.10**.
 
@@ -83,16 +83,19 @@ source venv/bin/activate   # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## ▶️ Running the Application
+## Running the Application
 
 To start real-time sign language detection:
 ```bash
 python app.py
 ```
 
+> **Note:** The app might not start on the first try. If that happens, run `python app.py` again.
+
+
 Make sure your webcam is connected and accessible.
 
-## 🧠 Training the Model
+## Training the Model
 
 ### Collect Training Data
 ```bash
@@ -111,7 +114,7 @@ python classifier/training/train_model.py
 
 The trained model will be saved as `model.pkl`.
 
-## 📊 Model Evaluation
+## Model Evaluation
 
 ```bash
 python classifier/evaluation/evaluate_model.py
@@ -119,7 +122,7 @@ python classifier/evaluation/evaluate_model.py
 
 This will output accuracy and performance metrics.
 
-## 🧪 Testing
+## Testing
 
 The project includes the following tests:
 
@@ -135,7 +138,7 @@ python tests/test_flow.py
 python tests/test_performance.py
 
 
-## 🚀 Future Improvements
+## Future Improvements
 
 - Support for dynamic sign sequences (full words/sentences)  
 - Deep learning–based classifier (LSTM / CNN)  
@@ -143,11 +146,11 @@ python tests/test_performance.py
 - Improved UI and visualization  
 
 
-## 📜 License
+## License
 
 This project is licensed under the **MIT License**.
 
-## 👤 Authors
+## Authors
 
 - Temirlan Altayev  
 - Alexandra Daradur  
